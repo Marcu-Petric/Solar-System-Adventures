@@ -8,8 +8,8 @@ in vec4 fragPosLightSpace;
 out vec4 fColor;
 
 //lighting
-uniform	vec3 lightDir;
-uniform	vec3 lightColor;
+uniform vec3 lightDir;
+uniform vec3 lightColor;
 
 //texture
 uniform sampler2D diffuseTexture;
@@ -48,7 +48,8 @@ void computeLightComponents()
 	specular = specularStrength * specCoeff * lightColor;
 }
 
-float computeShadow() {
+float computeShadow()
+{
 	vec3 normalizedCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
 	normalizedCoords = normalizedCoords * 0.5 + 0.5;
 	if (normalizedCoords.z > 1.0f) return 0.0f;
@@ -70,8 +71,7 @@ void main()
 	specular *= texture(specularTexture, fTexCoords).rgb;
 
 	float shadow = computeShadow();
-
 	vec3 color = min((ambient + (1.0f - shadow) * diffuse) + (1.0f - shadow) * specular, 1.0f);
-    
-    fColor = vec4(color, 1.0f);
+	
+	fColor = vec4(color, 1.0);
 }

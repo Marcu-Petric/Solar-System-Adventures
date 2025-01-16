@@ -26,6 +26,7 @@
 #include "Camera.hpp"
 #include "CelestialBody.h"
 #include "Moon.h"
+#include "Rocket.h"
 
 #include <iostream>
 
@@ -52,10 +53,15 @@ GLuint lightDirLoc;
 glm::vec3 lightColor;
 GLuint lightColorLoc;
 
+// Add with other global variables at the top
+const glm::vec3 PLATFORM_POSITION = glm::vec3(0.0f, -300.0f, 0.0f);
+
 gps::Camera myCamera(
 	glm::vec3(0.0f, 2.0f, -100.5f),
 	glm::vec3(0.0f, 0.0f, 0.0f),
-	glm::vec3(0.0f, 1.0f, 0.0f));
+	glm::vec3(0.0f, 1.0f, 0.0f),
+	PLATFORM_POSITION.y + 1.0f // Set minimum height 1 unit above platform
+);
 float cameraSpeed = 0.1f;
 float sprintMultiplier = 5.5f;
 
@@ -68,11 +74,13 @@ gps::Model3D ground;
 gps::Model3D lightCube;
 gps::Model3D screenQuad;
 gps::Model3D skybox;
+gps::Model3D platform;
 
 gps::Shader myCustomShader;
 gps::Shader lightShader;
 gps::Shader screenQuadShader;
 gps::Shader depthMapShader;
+gps::Shader sunShader;
 
 GLuint shadowMapFBO;
 GLuint depthMapTexture;
@@ -105,6 +113,11 @@ float globalSpeedMultiplier = 0.0f; // Start with planets not moving
 // Add at the top with other globals
 int trackedPlanetIndex = -1;		  // -1 means free camera
 const float TRACKING_DISTANCE = 5.0f; // Distance from camera to planet while tracking
+
+// Create a rocket instance
+gps::Rocket *rocket = nullptr;
+
+// Add with other global variables
 
 // Add this function to handle camera tracking
 void updateCameraTracking()
@@ -230,6 +243,17 @@ void windowResizeCallback(GLFWwindow *window, int width, int height)
 					   1, GL_FALSE, glm::value_ptr(projection));
 }
 
+// Add at the top with other global variables
+enum ViewMode
+{
+	SOLID,
+	WIREFRAME,
+	POINT,
+	SMOOTH,
+	FLAT
+};
+ViewMode currentViewMode = SOLID;
+
 void keyboardCallback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -296,6 +320,60 @@ void keyboardCallback(GLFWwindow *window, int key, int scancode, int action, int
 	{
 		// Increase global speed
 		globalSpeedMultiplier += 0.2f;
+	}
+
+	if (key == GLFW_KEY_R && action == GLFW_PRESS)
+	{
+		std::cout << "Launching rocket..." << std::endl; // Add debug output
+		if (rocket != nullptr)
+		{
+			rocket->launch(glm::vec3(0.0f, 1.0f, 0.0f), 50.0f);
+		}
+	}
+
+	if (key == GLFW_KEY_V && action == GLFW_PRESS)
+	{
+		switch (currentViewMode)
+		{
+		case SOLID:
+			currentViewMode = WIREFRAME;
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			glDisable(GL_POLYGON_SMOOTH);
+			std::cout << "Wireframe mode" << std::endl;
+			break;
+
+		case WIREFRAME:
+			currentViewMode = POINT;
+			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+			glDisable(GL_POLYGON_SMOOTH);
+			std::cout << "Point mode" << std::endl;
+			break;
+
+		case POINT:
+			currentViewMode = SMOOTH;
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glShadeModel(GL_SMOOTH);
+			glEnable(GL_POLYGON_SMOOTH);
+			glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+			std::cout << "Smooth shading mode" << std::endl;
+			break;
+
+		case SMOOTH:
+			currentViewMode = FLAT;
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glShadeModel(GL_FLAT);
+			glDisable(GL_POLYGON_SMOOTH);
+			std::cout << "Flat shading mode" << std::endl;
+			break;
+
+		case FLAT:
+			currentViewMode = SOLID;
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			glShadeModel(GL_SMOOTH);
+			glDisable(GL_POLYGON_SMOOTH);
+			std::cout << "Solid mode" << std::endl;
+			break;
+		}
 	}
 
 	if (key >= 0 && key < 1024)
@@ -519,18 +597,29 @@ void initOpenGLState()
 	glFrontFace(GL_CCW);	 // GL_CCW for counter clock-wise
 
 	glEnable(GL_FRAMEBUFFER_SRGB);
+
+	// Set initial view mode and smooth shading
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glShadeModel(GL_SMOOTH); // Enable smooth shading by default
+	glEnable(GL_POLYGON_SMOOTH);
+	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
 }
 
 void initObjects()
 {
-	float scale = 1.0f; // Keep existing scale
+	float scale = 1.0f;
 
 	nanosuit.LoadModel("objects/nanosuit/nanosuit.obj");
 	ground.LoadModel("objects/ground/ground.obj");
 	lightCube.LoadModel("objects/cube/cube.obj");
 	screenQuad.LoadModel("objects/quad/quad.obj");
 	skybox.LoadModel("objects/universe/map.obj");
+	platform.LoadModel("objects/platform/platform.obj");
 
+	// Initialize rocket with a smaller scale
+	rocket = new gps::Rocket("objects/rocket/apollo.obj",
+							 PLATFORM_POSITION,
+							 5.0f); // Reduced scale to 0.1
 
 	// Sun at center, radius is 109 units
 	sun = new gps::CelestialBody("objects/sun/sun.obj",
@@ -580,13 +669,19 @@ void initShaders()
 {
 	myCustomShader.loadShader("shaders/shaderStart.vert", "shaders/shaderStart.frag");
 	myCustomShader.useShaderProgram();
+
 	lightShader.loadShader("shaders/lightCube.vert", "shaders/lightCube.frag");
 	lightShader.useShaderProgram();
+
 	screenQuadShader.loadShader("shaders/screenQuad.vert", "shaders/screenQuad.frag");
 	screenQuadShader.useShaderProgram();
 
 	depthMapShader.loadShader("shaders/depthMap.vert", "shaders/depthMap.frag");
 	depthMapShader.useShaderProgram();
+
+	// Add sun shader initialization
+	sunShader.loadShader("shaders/sunVertex.vert", "shaders/sunFragment.frag");
+	sunShader.useShaderProgram();
 }
 
 void initUniforms()
@@ -610,7 +705,7 @@ void initUniforms()
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 	// set the light direction (direction towards the light)
-	lightDir = glm::vec3(-2.0, 2.0f, 1.0f);
+	lightDir = glm::vec3(-2.0f, 2.0f, 1.0f);
 	lightRotation = glm::rotate(glm::mat4(1.0f), glm::radians(lightAngle), glm::vec3(0.0f, 1.0f, 0.0f));
 	lightDirLoc = glGetUniformLocation(myCustomShader.shaderProgram, "lightDir");
 	glUniform3fv(lightDirLoc, 1, glm::value_ptr(glm::inverseTranspose(glm::mat3(view * lightRotation)) * lightDir));
@@ -663,13 +758,38 @@ glm::mat4 computeLightSpaceTrMatrix()
 
 void drawObjects(gps::Shader shader, bool depthPass)
 {
-	// Draw skybox at scale 30
+	// Draw skybox first
+	glDepthFunc(GL_LEQUAL);
 	model = glm::scale(glm::mat4(1.0f), glm::vec3(500.0f));
 	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
 	skybox.Draw(shader);
+	glDepthFunc(GL_LESS);
 
-	// Draw all celestial bodies
-	sun->draw(shader);
+	// Handle sun drawing
+	if (!depthPass && shader.shaderProgram == myCustomShader.shaderProgram)
+	{
+		// Switch to sun shader
+		sunShader.useShaderProgram();
+
+		// Set uniforms for sun shader
+		model = glm::mat4(1.0f);
+		glUniformMatrix4fv(glGetUniformLocation(sunShader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+		glUniformMatrix4fv(glGetUniformLocation(sunShader.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(sunShader.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+		glUniform1f(glGetUniformLocation(sunShader.shaderProgram, "time"), glfwGetTime());
+
+		// Draw sun
+		sun->draw(sunShader);
+
+		// Switch back to regular shader
+		shader.useShaderProgram();
+	}
+	else
+	{
+		sun->draw(shader);
+	}
+
+	// Draw remaining objects with regular shader
 	mercury->draw(shader);
 	venus->draw(shader);
 	earth->draw(shader);
@@ -680,18 +800,18 @@ void drawObjects(gps::Shader shader, bool depthPass)
 	neptune->draw(shader);
 	moon->draw(shader);
 
-	// Draw ground
-	model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1.0f, 0.0f));
-	model = glm::scale(model, glm::vec3(0.5f));
-	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-
-	if (!depthPass)
+	// Draw rocket
+	if (rocket != nullptr)
 	{
-		normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
-		glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+		rocket->draw(shader);
 	}
 
-	// ground.Draw(shader);
+	// Draw platform with regular shader
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, PLATFORM_POSITION);
+	model = glm::scale(model, glm::vec3(100.0f, 0.1f, 100.0f));
+	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+	platform.Draw(shader);
 }
 
 void renderScene()
@@ -710,6 +830,9 @@ void renderScene()
 	uranus->update(deltaTime, globalSpeedMultiplier);
 	neptune->update(deltaTime, globalSpeedMultiplier);
 	moon->update(deltaTime, globalSpeedMultiplier);
+
+	// Update rocket (remove the duplicate update call)
+	rocket->update(deltaTime, 1.0f); // Use 1.0f instead of globalSpeedMultiplier for consistent physics
 
 	// Update camera tracking before rendering
 	updateCameraTracking();
@@ -786,6 +909,12 @@ void renderScene()
 
 		lightCube.Draw(lightShader);
 	}
+
+	// Set point size for point mode
+	if (currentViewMode == POINT)
+	{
+		glPointSize(3.0f);
+	}
 }
 
 void cleanup()
@@ -807,6 +936,7 @@ void cleanup()
 	delete moon;
 	delete uranus;
 	delete venus;
+	delete rocket;
 }
 
 int main(int argc, const char *argv[])

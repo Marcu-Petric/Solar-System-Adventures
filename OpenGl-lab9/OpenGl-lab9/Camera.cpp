@@ -4,14 +4,15 @@ namespace gps
 {
 
     // Camera constructor
-    Camera::Camera(glm::vec3 cameraPosition, glm::vec3 cameraTarget, glm::vec3 cameraUp)
+    Camera::Camera(glm::vec3 cameraPosition, glm::vec3 cameraTarget, glm::vec3 cameraUp, float minHeight)
     {
         this->cameraPosition = cameraPosition;
         this->cameraTarget = cameraTarget;
         this->cameraUpDirection = cameraUp;
         this->cameraFrontDirection = glm::normalize(cameraTarget - cameraPosition);
         this->cameraRightDirection = glm::normalize(glm::cross(cameraFrontDirection, cameraUpDirection));
-        this->fov = 45.0f; // Initialize FOV
+        this->fov = 45.0f;           // Initialize FOV
+        this->minHeight = minHeight; // Store the minimum height
     }
 
     // return the view matrix, using the glm::lookAt() function
@@ -23,23 +24,36 @@ namespace gps
     // update the camera internal parameters following a camera move event
     void Camera::move(MOVE_DIRECTION direction, float speed)
     {
+        glm::vec3 newPosition = cameraPosition; // Store potential new position
+
         switch (direction)
         {
         case MOVE_FORWARD:
-            cameraPosition += cameraFrontDirection * speed;
+            newPosition += cameraFrontDirection * speed;
             break;
 
         case MOVE_BACKWARD:
-            cameraPosition -= cameraFrontDirection * speed;
+            newPosition -= cameraFrontDirection * speed;
             break;
 
         case MOVE_RIGHT:
-            cameraPosition += cameraRightDirection * speed;
+            newPosition += cameraRightDirection * speed;
             break;
 
         case MOVE_LEFT:
-            cameraPosition -= cameraRightDirection * speed;
+            newPosition -= cameraRightDirection * speed;
             break;
+        }
+
+        // Use the member variable minHeight for the check
+        if (newPosition.y > minHeight)
+        {
+            cameraPosition = newPosition;
+        }
+        else
+        {
+            newPosition.y = minHeight;
+            cameraPosition = newPosition;
         }
     }
 

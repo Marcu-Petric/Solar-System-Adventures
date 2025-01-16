@@ -22,7 +22,7 @@ namespace gps
 
     public:
         // Camera constructor
-        Camera(glm::vec3 cameraPosition, glm::vec3 cameraTarget, glm::vec3 cameraUp);
+        Camera(glm::vec3 cameraPosition, glm::vec3 cameraTarget, glm::vec3 cameraUp, float minHeight);
         // return the view matrix, using the glm::lookAt() function
         glm::mat4 getViewMatrix();
         // update the camera internal parameters following a camera move event
@@ -56,6 +56,10 @@ namespace gps
         const float MIN_FOV = 1.0f;
         const float MAX_FOV = 90.0f;
         const float ZOOM_SENSITIVITY = 2.0f;
+
+        // Add platform height constant
+        const float PLATFORM_HEIGHT = -300.0f;
+        float minHeight; // Store minimum height as member variable
     };
 }
 
