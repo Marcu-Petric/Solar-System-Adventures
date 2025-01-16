@@ -60,6 +60,14 @@ float computeShadow()
 	return shadow;
 }
 
+float computeFog()
+{
+	float fogDensity = 0.0005f;
+	float fragmentDistance = length(fPosEye.xyz);
+	float fogFactor = exp(-pow(fragmentDistance * fogDensity, 2));
+	return clamp(fogFactor, 0.0f, 1.0f);
+}
+
 void main() 
 {
 	computeLightComponents();
@@ -73,5 +81,8 @@ void main()
 	float shadow = computeShadow();
 	vec3 color = min((ambient + (1.0f - shadow) * diffuse) + (1.0f - shadow) * specular, 1.0f);
 	
-	fColor = vec4(color, 1.0);
+	float fogFactor = computeFog();
+	vec4 fogColor = vec4(0.5f, 0.5f, 0.5f, 1.0f); // Gray fog
+	
+	fColor = mix(fogColor, vec4(color, 1.0f), fogFactor);
 }

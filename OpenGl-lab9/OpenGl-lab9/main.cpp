@@ -27,6 +27,7 @@
 #include "CelestialBody.h"
 #include "Moon.h"
 #include "Rocket.h"
+#include "Rain.hpp"
 
 #include <iostream>
 
@@ -118,6 +119,8 @@ const float TRACKING_DISTANCE = 5.0f; // Distance from camera to planet while tr
 gps::Rocket *rocket = nullptr;
 
 // Add with other global variables
+Rain *rain = nullptr;
+gps::Shader rainShader;
 
 // Add this function to handle camera tracking
 void updateCameraTracking()
@@ -374,6 +377,12 @@ void keyboardCallback(GLFWwindow *window, int key, int scancode, int action, int
 			std::cout << "Solid mode" << std::endl;
 			break;
 		}
+	}
+
+	if (key == GLFW_KEY_P && action == GLFW_PRESS)
+	{
+		rain->toggle();
+		std::cout << (rain->getStatus() ? "Rain started" : "Rain stopped") << std::endl;
 	}
 
 	if (key >= 0 && key < 1024)
@@ -663,6 +672,8 @@ void initObjects()
 						 glm::vec3(203.0f / scale, 0.0f, 0.0f), // Slightly beyond Earth
 						 0.273f / scale, 3.0f / scale, 2.0f);
 	moon->setParentPlanet(earth);
+
+	rain = new Rain(10000);
 }
 
 void initShaders()
@@ -682,6 +693,8 @@ void initShaders()
 	// Add sun shader initialization
 	sunShader.loadShader("shaders/sunVertex.vert", "shaders/sunFragment.frag");
 	sunShader.useShaderProgram();
+
+	rainShader.loadShader("shaders/rain.vert", "shaders/rain.frag");
 }
 
 void initUniforms()
@@ -915,6 +928,23 @@ void renderScene()
 	{
 		glPointSize(3.0f);
 	}
+
+	if (rain->getStatus())
+	{
+		rainShader.useShaderProgram();
+		glUniformMatrix4fv(glGetUniformLocation(rainShader.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+		glUniformMatrix4fv(glGetUniformLocation(rainShader.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glDepthMask(GL_FALSE);
+
+		rain->update(deltaTime);
+		rain->draw();
+
+		glDepthMask(GL_TRUE);
+		glDisable(GL_BLEND);
+	}
 }
 
 void cleanup()
@@ -937,6 +967,7 @@ void cleanup()
 	delete uranus;
 	delete venus;
 	delete rocket;
+	delete rain;
 }
 
 int main(int argc, const char *argv[])
