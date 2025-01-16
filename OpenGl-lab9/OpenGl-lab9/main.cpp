@@ -55,6 +55,9 @@ glm::vec3 lightColor;
 GLuint lightColorLoc;
 
 // Add with other global variables at the top
+bool isNightTime = false; // Start with daytime (point lights)
+
+// Add with other global variables at the top
 const glm::vec3 PLATFORM_POSITION = glm::vec3(0.0f, -300.0f, 0.0f);
 
 gps::Camera myCamera(
@@ -127,6 +130,24 @@ gps::Shader rainShader;
 glm::vec3 windDirection(0.0f);
 float windStrength = 0.0f;
 const float WIND_SPEED = 10.0f;
+
+// Add to your global variables
+GLuint lightColor1Loc;
+GLuint lightPosLoc;
+glm::vec3 lightColor1;
+glm::vec3 lightPos;
+
+// Add these with your other light-related declarations
+glm::vec3 lightPos1;
+glm::vec3 lightPos2;
+glm::vec3 lightPos3;
+glm::vec3 lightPos4;
+
+// Add these with your other uniform location declarations
+GLuint lightPosLoc1;
+GLuint lightPosLoc2;
+GLuint lightPosLoc3;
+GLuint lightPosLoc4;
 
 // Add this function to handle camera tracking
 void updateCameraTracking()
@@ -389,6 +410,15 @@ void keyboardCallback(GLFWwindow *window, int key, int scancode, int action, int
 	{
 		rain->toggle();
 		std::cout << (rain->isEnabled() ? "Rain started" : "Rain stopped") << std::endl;
+	}
+
+	if (key == GLFW_KEY_N && action == GLFW_PRESS)
+	{
+		isNightTime = !isNightTime; // Toggle between day and night
+
+		myCustomShader.useShaderProgram();
+		// Update the shader about the current state
+		glUniform1i(glGetUniformLocation(myCustomShader.shaderProgram, "isNightTime"), isNightTime);
 	}
 
 	if (key >= 0 && key < 1024)
@@ -751,18 +781,78 @@ void initUniforms()
 	glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 	// set the light direction (direction towards the light)
-	lightDir = glm::vec3(-2.0f, 2.0f, 1.0f);
+	lightDir = glm::vec3(0.0f, 1.0f, 1.0f);
 	lightRotation = glm::rotate(glm::mat4(1.0f), glm::radians(lightAngle), glm::vec3(0.0f, 1.0f, 0.0f));
 	lightDirLoc = glGetUniformLocation(myCustomShader.shaderProgram, "lightDir");
 	glUniform3fv(lightDirLoc, 1, glm::value_ptr(glm::inverseTranspose(glm::mat3(view * lightRotation)) * lightDir));
 
 	// set light color
-	lightColor = glm::vec3(1.0f, 1.0f, 1.0f); // white light
+	lightColor = glm::vec3(1.0f, 0.9f, 0.5f); // warm yellow light
 	lightColorLoc = glGetUniformLocation(myCustomShader.shaderProgram, "lightColor");
 	glUniform3fv(lightColorLoc, 1, glm::value_ptr(lightColor));
 
 	lightShader.useShaderProgram();
 	glUniformMatrix4fv(glGetUniformLocation(lightShader.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+	// Add point light setup
+	lightColor1 = glm::vec3(1.0f, 0.0f, 0.0f); // red point light
+	lightColor1Loc = glGetUniformLocation(myCustomShader.shaderProgram, "lightColor1");
+	glUniform3fv(lightColor1Loc, 1, glm::value_ptr(lightColor1));
+
+	// Position the point light (e.g., near the main tree)
+	lightPos = glm::vec3(-3.0f, 0.0f, -13.0f);
+	lightPosLoc = glGetUniformLocation(myCustomShader.shaderProgram, "lightPos");
+	glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
+
+	// Set up multiple point lights around the platform
+	glm::vec3 yellowLight = glm::vec3(1.0f, 1.0f, 0.0f); // Yellow color
+
+	// Light positions relative to PLATFORM_POSITION
+	lightPos = PLATFORM_POSITION + glm::vec3(-20.0f, 10.0f, -20.0f); // Front left
+	lightPos1 = PLATFORM_POSITION + glm::vec3(20.0f, 10.0f, -20.0f); // Front right
+	lightPos2 = PLATFORM_POSITION + glm::vec3(-20.0f, 10.0f, 20.0f); // Back left
+	lightPos3 = PLATFORM_POSITION + glm::vec3(20.0f, 10.0f, 20.0f);	 // Back right
+	lightPos4 = PLATFORM_POSITION + glm::vec3(0.0f, 15.0f, 0.0f);	 // Center, higher up
+
+	// Set light positions in shader
+	myCustomShader.useShaderProgram();
+	glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
+	glUniform3fv(lightPosLoc1, 1, glm::value_ptr(lightPos1));
+	glUniform3fv(lightPosLoc2, 1, glm::value_ptr(lightPos2));
+	glUniform3fv(lightPosLoc3, 1, glm::value_ptr(lightPos3));
+	glUniform3fv(lightPosLoc4, 1, glm::value_ptr(lightPos4));
+
+	// Set light colors (all yellow in this case)
+	glUniform3fv(lightColor1Loc, 1, glm::value_ptr(yellowLight));
+	glUniform3fv(glGetUniformLocation(myCustomShader.shaderProgram, "lightColor2"), 1, glm::value_ptr(yellowLight));
+	glUniform3fv(glGetUniformLocation(myCustomShader.shaderProgram, "lightColor3"), 1, glm::value_ptr(yellowLight));
+	glUniform3fv(glGetUniformLocation(myCustomShader.shaderProgram, "lightColor4"), 1, glm::value_ptr(yellowLight));
+	glUniform3fv(glGetUniformLocation(myCustomShader.shaderProgram, "lightColor5"), 1, glm::value_ptr(yellowLight));
+
+	// Get uniform locations for all light positions
+	lightPosLoc = glGetUniformLocation(myCustomShader.shaderProgram, "lightPos");
+	lightPosLoc1 = glGetUniformLocation(myCustomShader.shaderProgram, "lightPos1");
+	lightPosLoc2 = glGetUniformLocation(myCustomShader.shaderProgram, "lightPos2");
+	lightPosLoc3 = glGetUniformLocation(myCustomShader.shaderProgram, "lightPos3");
+	lightPosLoc4 = glGetUniformLocation(myCustomShader.shaderProgram, "lightPos4");
+
+	// Set light positions
+	lightPos = PLATFORM_POSITION + glm::vec3(-20.0f, 10.0f, -20.0f); // Front left
+	lightPos1 = PLATFORM_POSITION + glm::vec3(20.0f, 10.0f, -20.0f); // Front right
+	lightPos2 = PLATFORM_POSITION + glm::vec3(-20.0f, 10.0f, 20.0f); // Back left
+	lightPos3 = PLATFORM_POSITION + glm::vec3(20.0f, 10.0f, 20.0f);	 // Back right
+	lightPos4 = PLATFORM_POSITION + glm::vec3(0.0f, 15.0f, 0.0f);	 // Center, higher up
+
+	// Set the uniforms
+	glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
+	glUniform3fv(lightPosLoc1, 1, glm::value_ptr(lightPos1));
+	glUniform3fv(lightPosLoc2, 1, glm::value_ptr(lightPos2));
+	glUniform3fv(lightPosLoc3, 1, glm::value_ptr(lightPos3));
+	glUniform3fv(lightPosLoc4, 1, glm::value_ptr(lightPos4));
+
+	// Initialize the day/night state
+	myCustomShader.useShaderProgram();
+	glUniform1i(glGetUniformLocation(myCustomShader.shaderProgram, "isNightTime"), isNightTime);
 }
 
 void initFBO()
@@ -991,6 +1081,11 @@ void renderScene()
 		glDepthMask(GL_TRUE);
 		glDisable(GL_BLEND);
 	}
+
+	myCustomShader.useShaderProgram();
+
+	// Update light position uniform (if the light moves)
+	glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
 }
 
 void cleanup()
