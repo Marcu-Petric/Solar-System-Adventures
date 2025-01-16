@@ -9,26 +9,35 @@
 class Rain
 {
 public:
-    struct Droplet
+    struct RainParticle
     {
-        glm::vec3 pos;
+        glm::vec3 position;
+        glm::vec3 velocity;
+        float lifetime;
         float size;
     };
 
-    Rain(int count = 10000);
+    Rain(const glm::vec3 &platformPosition, int numParticles = 100000);
     ~Rain();
 
-    void init();
-    void update(float deltaTime);
-    void draw();
-    void toggle() { isActive = !isActive; }
-    bool getStatus() { return isActive; }
+    void initialize();
+    void setupBuffers();
+    void update(float deltaTime, const glm::vec3 &windDirection = glm::vec3(0.0f), float windStrength = 0.0f);
+    void updateBuffer();
+    void render();
+    void draw() { render(); }
+    void toggle() { rainEnabled = !rainEnabled; }
+
+    bool isEnabled() const { return rainEnabled; }
+
+    std::vector<RainParticle> &getParticles() { return rainParticles; }
 
 private:
-    std::vector<Droplet> droplets;
-    GLuint vao, vbo;
-    bool isActive;
-    int particleCount;
+    std::vector<RainParticle> rainParticles;
+    int numParticles;
+    GLuint rainVAO, rainVBO;
+    bool rainEnabled;
+    glm::vec3 platformPos;
 };
 
 #endif

@@ -382,7 +382,7 @@ void keyboardCallback(GLFWwindow *window, int key, int scancode, int action, int
 	if (key == GLFW_KEY_P && action == GLFW_PRESS)
 	{
 		rain->toggle();
-		std::cout << (rain->getStatus() ? "Rain started" : "Rain stopped") << std::endl;
+		std::cout << (rain->isEnabled() ? "Rain started" : "Rain stopped") << std::endl;
 	}
 
 	if (key >= 0 && key < 1024)
@@ -673,7 +673,7 @@ void initObjects()
 						 0.273f / scale, 3.0f / scale, 2.0f);
 	moon->setParentPlanet(earth);
 
-	rain = new Rain(10000);
+	rain = new Rain(PLATFORM_POSITION);
 }
 
 void initShaders()
@@ -929,7 +929,7 @@ void renderScene()
 		glPointSize(3.0f);
 	}
 
-	if (rain->getStatus())
+	if (rain->isEnabled())
 	{
 		rainShader.useShaderProgram();
 		glUniformMatrix4fv(glGetUniformLocation(rainShader.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
