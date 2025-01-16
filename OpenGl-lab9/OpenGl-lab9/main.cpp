@@ -76,6 +76,7 @@ gps::Model3D lightCube;
 gps::Model3D screenQuad;
 gps::Model3D skybox;
 gps::Model3D platform;
+gps::Model3D lantern;
 
 gps::Shader myCustomShader;
 gps::Shader lightShader;
@@ -121,6 +122,11 @@ gps::Rocket *rocket = nullptr;
 // Add with other global variables
 Rain *rain = nullptr;
 gps::Shader rainShader;
+
+// Add these as global variables at the top with other globals
+glm::vec3 windDirection(0.0f);
+float windStrength = 0.0f;
+const float WIND_SPEED = 10.0f;
 
 // Add this function to handle camera tracking
 void updateCameraTracking()
@@ -525,6 +531,32 @@ void processMovement()
 		myCamera.move(gps::MOVE_RIGHT, currentSpeed);
 	}
 
+	// Wind controls using arrow keys
+	if (pressedKeys[GLFW_KEY_UP])
+	{ // Wind from North
+		windDirection = glm::vec3(0.0f, 0.0f, -1.0f);
+		windStrength = WIND_SPEED;
+	}
+	else if (pressedKeys[GLFW_KEY_DOWN])
+	{ // Wind from South
+		windDirection = glm::vec3(0.0f, 0.0f, 1.0f);
+		windStrength = WIND_SPEED;
+	}
+	else if (pressedKeys[GLFW_KEY_LEFT])
+	{ // Wind from West
+		windDirection = glm::vec3(-1.0f, 0.0f, 0.0f);
+		windStrength = WIND_SPEED;
+	}
+	else if (pressedKeys[GLFW_KEY_RIGHT])
+	{ // Wind from East
+		windDirection = glm::vec3(1.0f, 0.0f, 0.0f);
+		windStrength = WIND_SPEED;
+	}
+	else
+	{
+		windStrength = 0.0f; // No wind when no key is pressed
+	}
+
 	// Update view matrix
 	view = myCamera.getViewMatrix();
 	myCustomShader.useShaderProgram();
@@ -624,6 +656,7 @@ void initObjects()
 	screenQuad.LoadModel("objects/quad/quad.obj");
 	skybox.LoadModel("objects/universe/map.obj");
 	platform.LoadModel("objects/platform/platform.obj");
+	lantern.LoadModel("objects/lantern/12299_Lantern_v1_l2.obj");
 
 	// Initialize rocket with a smaller scale
 	rocket = new gps::Rocket("objects/rocket/apollo.obj",
@@ -825,6 +858,14 @@ void drawObjects(gps::Shader shader, bool depthPass)
 	model = glm::scale(model, glm::vec3(100.0f, 0.1f, 100.0f));
 	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
 	platform.Draw(shader);
+
+	// Draw lantern
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, PLATFORM_POSITION + glm::vec3(-20.0f, 10.0f, 0.0f)); // 5 units above platform
+	model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));	   // Rotate 90 degrees around X axis
+	model = glm::scale(model, glm::vec3(0.1f));										   // Adjust scale as needed
+	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+	lantern.Draw(shader);
 }
 
 void renderScene()
@@ -932,6 +973,11 @@ void renderScene()
 	if (rain->isEnabled())
 	{
 		rainShader.useShaderProgram();
+
+		// Pass wind uniforms to shader
+		glUniform3fv(glGetUniformLocation(rainShader.shaderProgram, "windDirection"), 1, glm::value_ptr(windDirection));
+		glUniform1f(glGetUniformLocation(rainShader.shaderProgram, "windStrength"), windStrength);
+
 		glUniformMatrix4fv(glGetUniformLocation(rainShader.shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
 		glUniformMatrix4fv(glGetUniformLocation(rainShader.shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -939,7 +985,7 @@ void renderScene()
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glDepthMask(GL_FALSE);
 
-		rain->update(deltaTime);
+		rain->update(deltaTime, windDirection, windStrength);
 		rain->draw();
 
 		glDepthMask(GL_TRUE);
