@@ -408,7 +408,7 @@ void keyboardCallback(GLFWwindow *window, int key, int scancode, int action, int
 
 	if (key == GLFW_KEY_P && action == GLFW_PRESS)
 	{
-		rain->toggle();
+		rain->switchState();
 		std::cout << (rain->isEnabled() ? "Rain started" : "Rain stopped") << std::endl;
 	}
 
@@ -1098,8 +1098,8 @@ void renderScene()
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glDepthMask(GL_FALSE);
 
-		rain->update(deltaTime, windDirection, windStrength);
-		rain->draw();
+		rain->processFrame(deltaTime, windDirection, windStrength);
+		rain->show();
 
 		glDepthMask(GL_TRUE);
 		glDisable(GL_BLEND);

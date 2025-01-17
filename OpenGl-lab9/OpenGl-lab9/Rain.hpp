@@ -20,16 +20,15 @@ public:
     Rain(const glm::vec3 &platformPosition, int numParticles = 100000);
     ~Rain();
 
-    void initialize();
-    void setupBuffers();
-    void update(float deltaTime, const glm::vec3 &windDirection = glm::vec3(0.0f), float windStrength = 0.0f);
-    void updateBuffer();
-    void render();
-    void draw() { render(); }
-    void toggle() { rainEnabled = !rainEnabled; }
+    void initSystem();
+    void configureGraphics();
+    void processFrame(float deltaTime, const glm::vec3 &windDirection = glm::vec3(0.0f), float windStrength = 0.0f);
+    void refreshGraphics();
+    void display();
+    void show() { display(); }
+    void switchState() { rainEnabled = !rainEnabled; }
 
     bool isEnabled() const { return rainEnabled; }
-
     std::vector<RainParticle> &getParticles() { return rainParticles; }
 
 private:

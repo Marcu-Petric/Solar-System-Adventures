@@ -5,7 +5,7 @@
 Rain::Rain(const glm::vec3 &platformPosition, int numParticles)
     : numParticles(numParticles), rainEnabled(false), platformPos(platformPosition)
 {
-    initialize();
+    initSystem();
 }
 
 Rain::~Rain()
@@ -14,7 +14,7 @@ Rain::~Rain()
     glDeleteBuffers(1, &rainVBO);
 }
 
-void Rain::initialize()
+void Rain::initSystem()
 {
     rainParticles.clear();
     rainParticles.reserve(numParticles);
@@ -39,10 +39,10 @@ void Rain::initialize()
         rainParticles.push_back(particle);
     }
 
-    setupBuffers();
+    configureGraphics();
 }
 
-void Rain::setupBuffers()
+void Rain::configureGraphics()
 {
     glGenVertexArrays(1, &rainVAO);
     glGenBuffers(1, &rainVBO);
@@ -60,7 +60,7 @@ void Rain::setupBuffers()
     glBindVertexArray(0);
 }
 
-void Rain::update(float deltaTime, const glm::vec3 &windDirection, float windStrength)
+void Rain::processFrame(float deltaTime, const glm::vec3 &windDirection, float windStrength)
 {
     if (!rainEnabled)
         return;
@@ -122,10 +122,10 @@ void Rain::update(float deltaTime, const glm::vec3 &windDirection, float windStr
         }
     }
 
-    updateBuffer();
+    refreshGraphics();
 }
 
-void Rain::updateBuffer()
+void Rain::refreshGraphics()
 {
     static std::vector<float> data;
     data.clear();
@@ -143,7 +143,7 @@ void Rain::updateBuffer()
     glBufferSubData(GL_ARRAY_BUFFER, 0, data.size() * sizeof(float), data.data());
 }
 
-void Rain::render()
+void Rain::display()
 {
     glBindVertexArray(rainVAO);
     glDrawArrays(GL_POINTS, 0, rainParticles.size());
