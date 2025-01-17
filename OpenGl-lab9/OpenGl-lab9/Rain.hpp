@@ -29,7 +29,10 @@ public:
     void switchState() { systemActive = !systemActive; }
 
     bool isEnabled() const { return systemActive; }
+    bool isLightningActive() const { return lightningActive; }
     std::vector<RainParticle> &getParticles() { return elements; }
+
+    void triggerLightning();
 
 private:
     std::vector<RainParticle> elements;
@@ -37,6 +40,9 @@ private:
     GLuint vao, vbo;
     bool systemActive;
     glm::vec3 basePoint;
+    bool lightningActive = false;
+    float lightningTimer = 0.0f;
+    float nextLightningTime = 5.0f; // Time until next lightning
 };
 
 #endif

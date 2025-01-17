@@ -15,6 +15,7 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform	mat3 normalMatrix;
 uniform mat4 lightSpaceTrMatrix;
+uniform bool isLightning;
 
 void main() 
 {

@@ -901,7 +901,8 @@ void drawObjects(gps::Shader shader, bool depthPass)
 	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
 
 	// do not send the normal matrix if we are rendering in the depth map
-	if (!depthPass) {
+	if (!depthPass)
+	{
 		normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
 		glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normalMatrix));
 	}
@@ -913,7 +914,8 @@ void drawObjects(gps::Shader shader, bool depthPass)
 	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
 
 	// do not send the normal matrix if we are rendering in the depth map
-	if (!depthPass) {
+	if (!depthPass)
+	{
 		normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
 		glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normalMatrix));
 	}
@@ -933,21 +935,21 @@ void drawObjects(gps::Shader shader, bool depthPass)
 	}
 	skybox.Draw(shader);
 
-	//shader.useShaderProgram();
+	// shader.useShaderProgram();
 
-	//model = glm::mat4(1.0f);
-	//model = glm::translate(model, PLATFORM_POSITION + glm::vec3(-20.0f, 1.0f, -20.0f));
-	//model = glm::rotate(model, glm::radians(angleY), glm::vec3(0.0f, 1.0f, 0.0f));
-	//glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+	// model = glm::mat4(1.0f);
+	// model = glm::translate(model, PLATFORM_POSITION + glm::vec3(-20.0f, 1.0f, -20.0f));
+	// model = glm::rotate(model, glm::radians(angleY), glm::vec3(0.0f, 1.0f, 0.0f));
+	// glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
 
 	//// do not send the normal matrix if we are rendering in the depth map
-	//if (!depthPass)
+	// if (!depthPass)
 	//{
 	//	normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
 	//	glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normalMatrix));
-	//}
+	// }
 
-	//nanosuit.Draw(shader);
+	// nanosuit.Draw(shader);
 
 	// Handle sun drawing
 	if (!depthPass && shader.shaderProgram == myCustomShader.shaderProgram)
@@ -1134,6 +1136,10 @@ void renderScene()
 
 	// Update light position uniform (if the light moves)
 	glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
+
+	// Add this line to update the lightning uniform
+	glUniform1i(glGetUniformLocation(myCustomShader.shaderProgram, "isLightning"),
+				rain->isEnabled() && rain->isLightningActive());
 }
 
 void cleanup()

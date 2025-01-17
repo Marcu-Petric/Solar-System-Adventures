@@ -107,6 +107,7 @@ float computeFog()
 
 // Add with other uniforms at the top
 uniform bool isNightTime;
+uniform bool isLightning;  // New uniform for lightning effect
 
 void main() {
     vec3 color;
@@ -121,6 +122,13 @@ void main() {
 
         float shadow = computeShadow();
         color = min((ambient + (1.0f - shadow) * diffuse) + (1.0f - shadow) * specular, 1.0f);
+        
+        // Add lightning effect
+        if (isLightning) {
+            // Bright white flash during lightning
+            vec3 lightningColor = vec3(1.0, 1.0, 1.0) * 2.0;
+            color = mix(color, lightningColor, 0.7);
+        }
     } else {
         // Only point lights (day)
         color = vec3(0.0f);  // Start with no light
@@ -138,6 +146,12 @@ void main() {
     
     float fogFactor = computeFog();
     vec4 fogColor = vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    
+    // Modify fog color during lightning
+    if (isLightning) {
+        fogColor = vec4(0.8f, 0.8f, 1.0f, 1.0f);
+        fogFactor = mix(fogFactor, 1.0, 0.3); // Reduce fog during lightning
+    }
     
     fColor = mix(fogColor, vec4(color, 1.0f), fogFactor);
 }

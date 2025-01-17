@@ -65,6 +65,30 @@ void Rain::processFrame(float deltaTime, const glm::vec3 &windDirection, float w
     if (!systemActive)
         return;
 
+    // Lightning logic
+    if (lightningActive)
+    {
+        lightningTimer -= deltaTime;
+        if (lightningTimer <= 0.0f)
+        {
+            lightningActive = false;
+        }
+    }
+    else
+    {
+        nextLightningTime -= deltaTime;
+        if (nextLightningTime <= 0.0f)
+        {
+            // Increased chance for lightning (40% instead of 10%)
+            if (rand() % 100 < 40)
+            {
+                triggerLightning();
+            }
+            // Shorter time between lightning checks (2-7 seconds instead of 5-15)
+            nextLightningTime = 2.0f + (rand() % 5);
+        }
+    }
+
     const float windFactor = windStrength * 0.2f;
     const float velocityDamping = 0.95f;
     static bool wasWindEnabled = false;
@@ -147,4 +171,10 @@ void Rain::display()
 {
     glBindVertexArray(vao);
     glDrawArrays(GL_POINTS, 0, elements.size());
+}
+
+void Rain::triggerLightning()
+{
+    lightningActive = true;
+    lightningTimer = 0.4f; // Longer flash duration (0.4 seconds instead of 0.2)
 }
