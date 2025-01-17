@@ -2,41 +2,41 @@
 #include <cstdlib>
 #include <glm/gtc/random.hpp>
 
-Rain::Rain(const glm::vec3 &platformPosition, int numParticles)
-    : numParticles(numParticles), rainEnabled(false), platformPos(platformPosition)
+Rain::Rain(const glm::vec3 &basePoint, int particleCount)
+    : particleCount(particleCount), systemActive(false), basePoint(basePoint)
 {
     initSystem();
 }
 
 Rain::~Rain()
 {
-    glDeleteVertexArrays(1, &rainVAO);
-    glDeleteBuffers(1, &rainVBO);
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
 }
 
 void Rain::initSystem()
 {
-    rainParticles.clear();
-    rainParticles.reserve(numParticles);
+    elements.clear();
+    elements.reserve(particleCount);
 
-    const float xRange = 100.0f;
-    const float zRange = 100.0f;
-    const float heightAbovePlatform = 100.0f;
+    const float spreadX = 100.0f;
+    const float spreadZ = 100.0f;
+    const float heightOffset = 100.0f;
 
-    for (int i = 0; i < numParticles; ++i)
+    for (int i = 0; i < particleCount; ++i)
     {
-        RainParticle particle;
-        float startingHeight = platformPos.y + heightAbovePlatform + (rand() % 50);
+        RainParticle element;
+        float startHeight = basePoint.y + heightOffset + (rand() % 50);
 
-        particle.position = glm::vec3(
-            platformPos.x + (rand() % (int)xRange - xRange / 2),
-            startingHeight,
-            platformPos.z + (rand() % (int)zRange - zRange / 2));
+        element.worldPos = glm::vec3(
+            basePoint.x + (rand() % (int)spreadX - spreadX / 2),
+            startHeight,
+            basePoint.z + (rand() % (int)spreadZ - spreadZ / 2));
 
-        particle.velocity = glm::vec3(0.0f, -25.0f, 0.0f);
-        particle.lifetime = 10.0f + ((startingHeight - platformPos.y) / 15.0f);
-        particle.size = 2.0f + (rand() % 20) / 10.0f;
-        rainParticles.push_back(particle);
+        element.motion = glm::vec3(0.0f, -25.0f, 0.0f);
+        element.duration = 10.0f + ((startHeight - basePoint.y) / 15.0f);
+        element.scale = 2.0f + (rand() % 20) / 10.0f;
+        elements.push_back(element);
     }
 
     configureGraphics();
@@ -44,12 +44,12 @@ void Rain::initSystem()
 
 void Rain::configureGraphics()
 {
-    glGenVertexArrays(1, &rainVAO);
-    glGenBuffers(1, &rainVBO);
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
 
-    glBindVertexArray(rainVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, rainVBO);
-    glBufferData(GL_ARRAY_BUFFER, rainParticles.size() * (sizeof(glm::vec3) + sizeof(float)), nullptr, GL_DYNAMIC_DRAW);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, elements.size() * (sizeof(glm::vec3) + sizeof(float)), nullptr, GL_DYNAMIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3) + sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
@@ -62,7 +62,7 @@ void Rain::configureGraphics()
 
 void Rain::processFrame(float deltaTime, const glm::vec3 &windDirection, float windStrength)
 {
-    if (!rainEnabled)
+    if (!systemActive)
         return;
 
     const float windFactor = windStrength * 0.2f;
@@ -72,53 +72,53 @@ void Rain::processFrame(float deltaTime, const glm::vec3 &windDirection, float w
 
     if (wasWindEnabled && !isWindEnabled)
     {
-        for (auto &particle : rainParticles)
+        for (auto &element : elements)
         {
-            particle.velocity = glm::vec3(0.0f, -25.0f, 0.0f);
+            element.motion = glm::vec3(0.0f, -25.0f, 0.0f);
         }
     }
     wasWindEnabled = isWindEnabled;
 
-    for (auto &particle : rainParticles)
+    for (auto &element : elements)
     {
         if (isWindEnabled)
         {
-            particle.velocity.x = particle.velocity.x * velocityDamping + windDirection.x * windFactor;
-            particle.velocity.z = particle.velocity.z * velocityDamping + windDirection.z * windFactor;
+            element.motion.x = element.motion.x * velocityDamping + windDirection.x * windFactor;
+            element.motion.z = element.motion.z * velocityDamping + windDirection.z * windFactor;
         }
         else
         {
-            particle.velocity.x = 0.0f;
-            particle.velocity.z = 0.0f;
-            particle.velocity.y = -25.0f;
+            element.motion.x = 0.0f;
+            element.motion.z = 0.0f;
+            element.motion.y = -25.0f;
         }
 
-        particle.position += particle.velocity * deltaTime;
-        particle.lifetime -= deltaTime;
+        element.worldPos += element.motion * deltaTime;
+        element.duration -= deltaTime;
 
         // Reset when hitting platform or lifetime expires
-        if (particle.lifetime <= 0.0f || particle.position.y < platformPos.y)
+        if (element.duration <= 0.0f || element.worldPos.y < basePoint.y)
         {
-            float newHeight = platformPos.y + 100.0f + (rand() % 50);
+            float newHeight = basePoint.y + 100.0f + (rand() % 50);
 
-            particle.position = glm::vec3(
-                platformPos.x + (rand() % 100 - 50),
+            element.worldPos = glm::vec3(
+                basePoint.x + (rand() % 100 - 50),
                 newHeight,
-                platformPos.z + (rand() % 100 - 50));
+                basePoint.z + (rand() % 100 - 50));
 
             if (isWindEnabled)
             {
-                particle.velocity = glm::vec3(
+                element.motion = glm::vec3(
                     windDirection.x * windStrength * 0.1f,
                     -25.0f,
                     windDirection.z * windStrength * 0.1f);
             }
             else
             {
-                particle.velocity = glm::vec3(0.0f, -25.0f, 0.0f);
+                element.motion = glm::vec3(0.0f, -25.0f, 0.0f);
             }
 
-            particle.lifetime = 20.0f + ((newHeight - platformPos.y) / 15.0f);
+            element.duration = 20.0f + ((newHeight - basePoint.y) / 15.0f);
         }
     }
 
@@ -129,22 +129,22 @@ void Rain::refreshGraphics()
 {
     static std::vector<float> data;
     data.clear();
-    data.reserve(rainParticles.size() * 4);
+    data.reserve(elements.size() * 4);
 
-    for (const auto &particle : rainParticles)
+    for (const auto &element : elements)
     {
-        data.push_back(particle.position.x);
-        data.push_back(particle.position.y);
-        data.push_back(particle.position.z);
-        data.push_back(particle.size);
+        data.push_back(element.worldPos.x);
+        data.push_back(element.worldPos.y);
+        data.push_back(element.worldPos.z);
+        data.push_back(element.scale);
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, rainVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferSubData(GL_ARRAY_BUFFER, 0, data.size() * sizeof(float), data.data());
 }
 
 void Rain::display()
 {
-    glBindVertexArray(rainVAO);
-    glDrawArrays(GL_POINTS, 0, rainParticles.size());
+    glBindVertexArray(vao);
+    glDrawArrays(GL_POINTS, 0, elements.size());
 }

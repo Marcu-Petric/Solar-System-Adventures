@@ -11,32 +11,32 @@ class Rain
 public:
     struct RainParticle
     {
-        glm::vec3 position;
-        glm::vec3 velocity;
-        float lifetime;
-        float size;
+        glm::vec3 worldPos;
+        glm::vec3 motion;
+        float duration;
+        float scale;
     };
 
-    Rain(const glm::vec3 &platformPosition, int numParticles = 100000);
+    Rain(const glm::vec3 &basePoint, int particleCount = 100000);
     ~Rain();
 
     void initSystem();
     void configureGraphics();
-    void processFrame(float deltaTime, const glm::vec3 &windDirection = glm::vec3(0.0f), float windStrength = 0.0f);
+    void processFrame(float deltaTime, const glm::vec3 &airFlow = glm::vec3(0.0f), float flowStrength = 0.0f);
     void refreshGraphics();
     void display();
     void show() { display(); }
-    void switchState() { rainEnabled = !rainEnabled; }
+    void switchState() { systemActive = !systemActive; }
 
-    bool isEnabled() const { return rainEnabled; }
-    std::vector<RainParticle> &getParticles() { return rainParticles; }
+    bool isEnabled() const { return systemActive; }
+    std::vector<RainParticle> &getParticles() { return elements; }
 
 private:
-    std::vector<RainParticle> rainParticles;
-    int numParticles;
-    GLuint rainVAO, rainVBO;
-    bool rainEnabled;
-    glm::vec3 platformPos;
+    std::vector<RainParticle> elements;
+    int particleCount;
+    GLuint vao, vbo;
+    bool systemActive;
+    glm::vec3 basePoint;
 };
 
 #endif

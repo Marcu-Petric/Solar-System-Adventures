@@ -893,6 +893,8 @@ glm::mat4 computeLightSpaceTrMatrix()
 }
 
 void drawObjects(gps::Shader shader, bool depthPass)
+
+
 {
 	// Draw skybox first
 

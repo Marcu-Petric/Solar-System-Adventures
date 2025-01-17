@@ -1,20 +1,19 @@
 #version 410 core
 
-in float visibility;
+in float opacity;
 out vec4 FragColor;
-in vec3 debugPosition;
+in vec3 debugWorldPos;
 
 void main() {
-    vec2 coord = gl_PointCoord * 2.0 - 1.0;
-    float r = length(coord);
+    vec2 uv = gl_PointCoord * 2.0 - 1.0;
+    float dist = length(uv);
     
-    if (r > 1.0) discard;
+    if (dist > 1.0) discard;
     
-    float alpha = (1.0 - r * r) * 0.8;
-    alpha *= visibility;
+    float fadeValue = (1.0 - dist * dist) * 0.8;
+    fadeValue *= opacity;
     
-    // Add slight stretching effect in wind direction
-    alpha *= 1.0 + coord.y * 0.5;
+    fadeValue *= 1.0 + uv.y * 0.5;
     
-    FragColor = vec4(0.8, 0.9, 1.0, alpha * 0.8);
+    FragColor = vec4(0.8, 0.9, 1.0, fadeValue * 0.8);
 } 
