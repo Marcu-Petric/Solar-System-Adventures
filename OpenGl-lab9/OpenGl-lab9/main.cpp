@@ -895,11 +895,34 @@ glm::mat4 computeLightSpaceTrMatrix()
 void drawObjects(gps::Shader shader, bool depthPass)
 {
 	// Draw skybox first
-	glDepthFunc(GL_LEQUAL);
+
 	model = glm::scale(glm::mat4(1.0f), glm::vec3(500.0f));
 	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+
+	// do not send the normal matrix if we are rendering in the depth map
+	if (!depthPass)
+	{
+		normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
+		glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+	}
 	skybox.Draw(shader);
-	glDepthFunc(GL_LESS);
+
+	shader.useShaderProgram();
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, PLATFORM_POSITION + glm::vec3(-20.0f, 1.0f, -20.0f));
+	model = glm::rotate(model, glm::radians(angleY), glm::vec3(0.0f, 1.0f, 0.0f));
+	glUniformMatrix4fv(glGetUniformLocation(shader.shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+
+	// do not send the normal matrix if we are rendering in the depth map
+	if (!depthPass)
+	{
+		normalMatrix = glm::mat3(glm::inverseTranspose(view * model));
+		glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+	}
+
+	nanosuit.Draw(shader);
 
 	// Handle sun drawing
 	if (!depthPass && shader.shaderProgram == myCustomShader.shaderProgram)
